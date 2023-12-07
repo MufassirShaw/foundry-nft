@@ -6,6 +6,7 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 
 contract MoodNft is ERC721 {
+    error MoodNft__CantFlipMoodIfNotOwner();
     enum Mood {
         HAPPY,
         SAD
@@ -26,9 +27,7 @@ contract MoodNft is ERC721 {
         s_tokenCounter = 0;
     }
 
-    function mintNft(string memory tokenUri) public {
-        // s_tokenToUri[s_tokenCounter] = tokenUri;
-
+    function mintNft() public {
         _safeMint(msg.sender, s_tokenCounter);
         s_tokenIdToMood[s_tokenCounter] = Mood.HAPPY;
         s_tokenCounter++;
@@ -52,19 +51,31 @@ contract MoodNft is ERC721 {
         string memory tokenMetaData = Base64.encode(
             bytes(
                 abi.encodePacked(
-                    (
-                        '{"name":"',
-                        name(),
-                        '","description":"An NFT reflecting the mood of the owner", "attributes:[{ "trait_type":"moodniess", "value":100}],"',
-                        '"image":',
-                        imageURI,
-                        '"}'
-                    )
+                    '{"name":"',
+                    name(),
+                    '","description":"An NFT reflecting the mood of the owner", "attributes:[{ "trait_type":"moodniess", "value":100}],"',
+                    '"image":',
+                    imageUri,
+                    '"}'
                 )
             )
         );
 
         return string(abi.encodePacked(_baseURI(), tokenMetaData));
+    }
+
+    function flipMood(uint256 tokenId) public {
+        if (
+            getApproved(tokenId) != msg.sender && ownerOf(tokenId) != msg.sender
+        ) {
+            revert MoodNft__CantFlipMoodIfNotOwner();
+        }
+
+        if (s_tokenIdToMood[tokenId] == Mood.HAPPY) {
+            s_tokenIdToMood[tokenId] = Mood.SAD;
+        } else {
+            s_tokenIdToMood[tokenId] = Mood.HAPPY;
+        }
     }
 
     function getTokenCounter() public view returns (uint256) {
